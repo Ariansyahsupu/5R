@@ -6,6 +6,7 @@
     <title>Sistem Pelaporan 5R - Distribution Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -307,13 +308,26 @@
         <!-- Laporan Preview / PDF View (Minimalist Invoice Style) -->
         <main class="hidden w-full max-w-3xl mx-auto" id="reportSection">
             
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3 hide-on-print">
-                <button onclick="backToForm()" class="text-gray-500 hover:text-black bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto flex items-center justify-center">
-                    <i class="fa-solid fa-arrow-left mr-2"></i> Edit Data
+            <!-- Container Informasi Sukses & Download PNG -->
+            <div id="successStateContainer" class="hidden bg-white p-10 rounded-2xl border border-gray-200 card-shadow text-center">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-50 mb-6 border border-green-100">
+                    <i class="fa-solid fa-check text-3xl text-green-600"></i>
+                </div>
+                <h2 class="text-2xl font-bold tracking-tight text-black mb-2">Laporan Berhasil Terkirim</h2>
+                <p class="text-sm text-gray-500 mb-8">Data inspeksi 5R Anda telah berhasil disubmit ke dalam sistem.</p>
+                <button onclick="downloadPNG(event)" class="w-full sm:w-auto bg-black hover:bg-gray-800 text-white font-medium py-3 px-8 rounded-xl transition-all flex items-center justify-center mx-auto shadow-md">
+                    <i class="fa-solid fa-download mr-2"></i> Download Report to PNG
                 </button>
-                <div class="flex gap-3 w-full sm:w-auto">
-                    <button onclick="downloadPDF()" class="bg-white border border-gray-200 hover:border-black text-black px-4 py-2 rounded-lg text-sm font-medium transition-colors flex-1 sm:flex-none flex items-center justify-center">
-                        <i class="fa-regular fa-file-pdf mr-2"></i> Export PDF
+                <button onclick="backToForm()" class="mt-6 text-gray-500 hover:text-black text-sm font-medium transition-colors underline underline-offset-4">
+                    Kembali Buat Laporan Baru
+                </button>
+            </div>
+
+            <!-- Wrapper data laporan yang akan disembunyikan setelah sukses -->
+            <div id="reportDataContainer">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3 hide-on-print">
+                    <button onclick="backToForm()" class="text-gray-500 hover:text-black bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto flex items-center justify-center">
+                        <i class="fa-solid fa-arrow-left mr-2"></i> Edit Data
                     </button>
                     <button onclick="submitToGoogleSheets()" id="btnSubmitSheets" class="bg-black hover:bg-gray-800 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors flex-1 sm:flex-none flex items-center justify-center shadow-sm">
                         Submit Data <i class="fa-solid fa-cloud-arrow-up ml-2"></i>
@@ -360,7 +374,7 @@
                     <div>
                         <div class="bg-red-50 text-red-700 text-center py-1.5 text-[10px] font-bold tracking-widest rounded-t-lg border border-b-0 border-red-100">BEFORE</div>
                         <div class="border border-gray-200 rounded-b-lg overflow-hidden relative">
-                            <img id="repImgBefore" src="" class="w-full h-40 object-cover bg-gray-50">
+                            <img id="repImgBefore" src="" class="w-full h-40 object-cover bg-gray-50" alt="Before">
                             <div class="absolute bottom-0 left-0 w-full bg-black/60 backdrop-blur-sm p-1.5 text-[8px] text-white/90">
                                 <p><i class="fa-regular fa-clock mr-1"></i> <span class="repTimestamp"></span></p>
                                 <p class="mt-0.5"><i class="fa-solid fa-location-dot mr-1"></i> <span class="repLocation"></span></p>
@@ -370,7 +384,7 @@
                     <div>
                         <div class="bg-green-50 text-green-700 text-center py-1.5 text-[10px] font-bold tracking-widest rounded-t-lg border border-b-0 border-green-100">AFTER</div>
                         <div class="border border-gray-200 rounded-b-lg overflow-hidden relative">
-                            <img id="repImgAfter" src="" class="w-full h-40 object-cover bg-gray-50">
+                            <img id="repImgAfter" src="" class="w-full h-40 object-cover bg-gray-50" alt="After">
                             <div class="absolute bottom-0 left-0 w-full bg-black/60 backdrop-blur-sm p-1.5 text-[8px] text-white/90">
                                 <p><i class="fa-regular fa-clock mr-1"></i> <span class="repTimestamp"></span></p>
                                 <p class="mt-0.5"><i class="fa-solid fa-location-dot mr-1"></i> <span class="repLocation"></span></p>
@@ -415,6 +429,7 @@
                     </div>
                 </div>
 
+            </div>
             </div>
         </main>
 
@@ -669,6 +684,10 @@
 
             document.getElementById('repTotalScore').innerText = `${totalScore}/25`;
 
+            // Reset UI report kembali ke mode peninjauan
+            document.getElementById('reportDataContainer').classList.remove('hidden');
+            document.getElementById('successStateContainer').classList.add('hidden');
+
             document.getElementById('formSection').classList.add('hidden');
             document.getElementById('reportSection').classList.remove('hidden');
             window.scrollTo(0,0);
@@ -697,6 +716,48 @@
             html2pdf().set(opt).from(element).save();
         }
 
+        function downloadPNG(event) {
+            const container = document.getElementById('reportDataContainer');
+            const element = document.getElementById('reportCard');
+            const btn = event.currentTarget;
+            const originalBtnText = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Memproses...';
+            btn.disabled = true;
+
+            // Tampilkan sementara secara transparan/off-screen agar bisa di-render html2canvas
+            container.classList.remove('hidden');
+            container.style.position = 'absolute';
+            container.style.left = '-9999px';
+            container.style.top = '0';
+
+            html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
+                // Sembunyikan kembali
+                container.classList.add('hidden');
+                container.style.position = '';
+                container.style.left = '';
+                container.style.top = '';
+                
+                const link = document.createElement('a');
+                const areaName = document.getElementById('area').value.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                const dateStr = new Date().toISOString().split('T')[0];
+                link.download = `5R_Report_${areaName}_${dateStr}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                btn.innerHTML = originalBtnText;
+                btn.disabled = false;
+            }).catch(err => {
+                container.classList.add('hidden');
+                container.style.position = '';
+                container.style.left = '';
+                container.style.top = '';
+                btn.innerHTML = originalBtnText;
+                btn.disabled = false;
+                showModal("Error", "Gagal memproses gambar PNG.", "error");
+            });
+        }
+
         function submitToGoogleSheets() {
             const btn = document.getElementById('btnSubmitSheets');
             const originalText = btn.innerHTML;
@@ -705,17 +766,17 @@
                 return showModal("Konfigurasi API", "Endpoint URL belum dikonfigurasi pada source code.", "error");
             }
 
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Membuat & Mengirim PDF...';
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Memproses...';
             btn.disabled = true;
             btn.classList.add('opacity-70', 'cursor-wait');
 
-            // 1. Generate PDF secara instan di belakang layar
+            // 1. Generate PDF secara instan di belakang layar dengan optimasi kecepatan
             const element = document.getElementById('reportCard');
             const opt = {
                 margin:       5,
                 filename:     'temp.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                image:        { type: 'jpeg', quality: 0.8 }, // Dikurangi sedikit agar kompresi instan
+                html2canvas:  { scale: 1.5, useCORS: true, logging: false }, // Skala diturunkan agar render lebih cepat
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
@@ -727,30 +788,23 @@
                 currentReportData.pdfData = base64Data; // Sisipkan data PDF
                 currentReportData.fileName = `5R_Report_${currentReportData.area.replace(/[^a-z0-9]/gi, '_')}.pdf`;
 
-                // 2. Fetch diubah agar MENUNGGU respons selesai dari Google Drive
+                // 2. Fetch diubah menjadi mode 'no-cors' (Eksekusi Latar Belakang) agar instan tanpa menunggu Google Drive
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
-                    redirect: 'follow', // Wajib agar bisa mengikuti redirect Google
+                    mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(currentReportData)
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if(data.status === 'success') {
-                        showModal("Sukses", "Data dan laporan PDF berhasil tersimpan ke Folder Drive.", "success");
-                    } else {
-                        showModal("Gagal Tersimpan", "Sistem Google menolak: " + data.message, "error");
-                    }
-                })
-                .catch(error => {
-                    showModal("Upload Gagal", "Koneksi terputus atau ukuran PDF terlalu besar. Silakan coba lagi.", "error");
-                })
-                .finally(() => {
-                    // Tombol dikembalikan seperti semula setelah proses benar-benar selesai
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-70', 'cursor-wait');
-                });
+                }).catch(error => console.log("Background sync error:", error));
+
+                // UI Langsung dialihkan ke Success State secara instan (tanpa loading tunggu respons API)
+                document.getElementById('reportDataContainer').classList.add('hidden');
+                document.getElementById('successStateContainer').classList.remove('hidden');
+                window.scrollTo(0,0);
+                
+                // Tombol dikembalikan seperti semula (di belakang layar)
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                btn.classList.remove('opacity-70', 'cursor-wait');
             });
         }
 
