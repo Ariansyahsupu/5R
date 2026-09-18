@@ -851,32 +851,49 @@
             btn.disabled = true;
             btn.classList.add('opacity-80', 'cursor-wait', 'scale-[0.98]', 'transition-all');
 
-            // Menambahkan credentials: 'omit' agar Google tidak memblokir dan mengalihkan ke halaman Pilih Akun
-            fetch(GOOGLE_SCRIPT_URL + `?action=login&name=${encodeURIComponent(name)}&nik=${encodeURIComponent(nik)}`, { 
-                redirect: 'follow',
-                credentials: 'omit'
-            })
-                .then(async res => {
-                    const text = await res.text();
-                    try {
-                        return JSON.parse(text);
-                    } catch (e) {
-                        throw new Error("Gagal membaca data dari server Google. \n\nPastikan pengaturan Deploy di Google Apps Script Anda (Who has access) sudah diset ke 'Anyone', bukan 'Anyone with Google Account'.");
-                    }
-                })
-                .then(data => {
-                    if(data.status === 'success') {
-                        proceedToApp(currentSelectedRole, name);
-                    } else {
-                        showModal("Akses Ditolak", data.message || "Kredensial NIK tidak valid di database kami.");
-                    }
-                })
-                .catch(err => showModal("Akses Terblokir", err.message))
-                .finally(() => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-80', 'cursor-wait', 'scale-[0.98]');
-                });
+            // Data NIK Lokal untuk mempercepat proses masuk tanpa query ke Spreadsheet
+            const userCredentials = {
+                "Ariansyah Supu": "1020945",
+                "Andi Muhammad Yusuf": "1004654",
+                "Mauludin Abdullah": "1010674",
+                "Muhammad Domas Dirgantara": "1011908",
+                "Dharma": "1011347",
+                "Faisal Ardi": "1012754",
+                "Muhammad Dzu'al Alim Mustaqim": "1011999",
+                "Muhammad Riyadi": "1017301",
+                "Budi Sutrisno": "1010870",
+                "Andi Hidayat": "1013843",
+                "Fatikhin": "1013522",
+                "Slamet Riyadi": "1015861",
+                "Ardi Sutantiyo": "1022013",
+                "Ari Faunda Widodo": "1021095",
+                "Maulana Itsnal Fawakih Al Faro": "1015972",
+                "Asman Hotsiaman Purba": "1020483",
+                "Aisal": "1013522",
+                "Andika Putra": "1015861",
+                "Nur Hariyanto": "1022013",
+                "Sabil": "1021095",
+                "Nanda": "1015972",
+                "Morest": "1015332",
+                "Rifki Aulia Wahyudi": "1122",
+                "Syahril": "1122",
+                "Edwar": "1122",
+                "Putu": "1122",
+                "Fatur": "1122"
+            };
+
+            // Verifikasi lokal (Instan)
+            setTimeout(() => {
+                if (userCredentials[name] === nik) {
+                    proceedToApp(currentSelectedRole, name);
+                } else {
+                    showModal("Akses Ditolak", "Kredensial NIK tidak valid di database kami.");
+                }
+                
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                btn.classList.remove('opacity-80', 'cursor-wait', 'scale-[0.98]');
+            }, 300);
         }
 
         function proceedToApp(role, name) {
